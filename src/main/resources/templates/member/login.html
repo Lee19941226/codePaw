@@ -187,11 +187,12 @@ body {
 	justify-content: center;
 	align-items: center;
 	gap: 12px;
-	margin-top: 50px;
+	margin-top: 28px;
 }
 
 .dialog .ct .searchName-div,
 .dialog .ct .searchPhone-div,
+.dialog .ct .searchEmail-div,
 .dialogA .ct .searchId-div,
 .dialogA .ct .searchPhone-div,
 .dialogA .ct .searchPw-div,
@@ -216,21 +217,22 @@ body {
 	outline: none;
 }
 
-.dialogA .emailCertify-div {
-	width: 350px;
-	display: flex;
-	align-items: center;
-	gap: 8px;
+.code-input {
+	max-width: 110px;
+	border-left: 1px solid #e2c5bb;
 }
 
-.dialogA .emailCertify-div button {
+.inline-auth-btn {
 	border: none;
 	background: #FFB22C;
 	color: #fff;
-	padding: 9px 12px;
-	border-radius: 6px;
+	padding: 7px 9px;
+	font-size: 11px;
 	cursor: pointer;
-	font-size: 12px;
+	min-width: 64px;
+	height: calc(100% - 6px);
+	margin: 3px;
+	border-radius: 6px;
 }
 
 .dialog .result-div,
@@ -245,7 +247,7 @@ body {
 .dialogA .sub-btn {
 	display: flex;
 	justify-content: center;
-	margin-top: 35px;
+	margin-top: 20px;
 }
 
 .dialog .sub-btn .search-btn,
@@ -262,7 +264,7 @@ body {
 
 .dialog .close,
 .dialogA .close {
-	margin-top: 20px;
+	margin-top: 12px;
 	text-align: center;
 }
 
@@ -286,22 +288,6 @@ body {
 	max-height: 92vh;
 	overflow-y: auto;
 	padding-bottom: 24px;
-}
-
-.dialogA .ct {
-	margin-top: 28px;
-}
-
-.dialogA .emailCertify-div {
-	justify-content: flex-end;
-}
-
-.dialogA .sub-btn {
-	margin-top: 20px;
-}
-
-.dialogA .close {
-	margin-top: 12px;
 }
 </style>
 </head>
@@ -354,6 +340,13 @@ body {
 							<span class="material-icons-outlined">phone_android</span>
 							<input type="text" id="findIdPhone" placeholder="전화번호 ex) 010-0000-0000">
 						</div>
+						<div class="searchEmail-div">
+							<span class="material-icons-outlined">email</span>
+							<input type="text" id="findIdEmail" placeholder="이메일 주소">
+							<input type="text" id="findIdCode" class="code-input" placeholder="인증번호" style="display: none;">
+							<button type="button" id="findIdVerifyBtn" class="inline-auth-btn">인증요청</button>
+							<button type="button" id="findIdCodeConfirmBtn" class="inline-auth-btn" style="display: none;">인증완료</button>
+						</div>
 						<div class="result-div id-result-div"></div>
 					</div>
 					<div class="sub-btn">
@@ -381,17 +374,13 @@ body {
 							<span class="material-icons-outlined">phone_android</span>
 							<input type="text" id="resetMemberPhone" placeholder="전화번호 ex) 010-0000-0000">
 						</div>
-
 						<div class="searchEmail-div hidden">
 							<span class="material-icons-outlined">email</span>
 							<input type="text" id="resetEmail" placeholder="이메일 주소">
+							<input type="text" id="resetCode" class="code-input" placeholder="인증번호" style="display: none;">
+							<button type="button" id="resetVerifyBtn" class="inline-auth-btn">인증요청</button>
+							<button type="button" id="resetCodeConfirmBtn" class="inline-auth-btn" style="display: none;">인증완료</button>
 						</div>
-						<div class="emailCertify-div hidden">
-							<input type="text" id="resetCode" placeholder="인증번호 입력" style="display: none; border: 1px solid #854836; border-radius: 4px;">
-							<button type="button" id="resetVerifyBtn">인증요청</button>
-							<button type="button" id="resetCodeConfirmBtn" style="display: none;">인증완료</button>
-						</div>
-
 						<div class="searchPw-div hidden">
 							<span class="material-icons-outlined">lock</span>
 							<input type="password" id="resetNewPw" placeholder="재설정 비밀번호">
@@ -416,6 +405,10 @@ body {
 
 	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 	<script>
+		let findIdMailCode = null;
+		let findIdMailTimer = null;
+		let findIdEmailVerified = false;
+
 		let resetMailCode = null;
 		let resetMailTimer = null;
 		let resetEmailVerified = false;
@@ -435,6 +428,20 @@ body {
 			$(".pw-result-div").html($("<span>").css("color", color).text(message));
 		}
 
+		function resetIdModalState() {
+			findIdMailCode = null;
+			findIdEmailVerified = false;
+			if (findIdMailTimer) {
+				clearTimeout(findIdMailTimer);
+				findIdMailTimer = null;
+			}
+			$("#findIdName, #findIdPhone, #findIdEmail, #findIdCode").val("");
+			$("#findIdCode").hide();
+			$("#findIdVerifyBtn").show();
+			$("#findIdCodeConfirmBtn").hide();
+			$(".id-result-div").empty();
+		}
+
 		function resetPwModalState() {
 			resetMailCode = null;
 			resetEmailVerified = false;
@@ -449,9 +456,9 @@ body {
 
 			$("#resetMemberId, #resetMemberPhone, #resetEmail, #resetCode, #resetNewPw, #resetNewPwRe").val("");
 			$("#resetEmail").removeClass("confirmed");
-
-			$(".searchEmail-div, .emailCertify-div, .searchPw-div, .searchPwRe-div").addClass("hidden");
-			$("#resetCode, #resetCodeConfirmBtn").hide();
+			$(".searchEmail-div, .searchPw-div, .searchPwRe-div").addClass("hidden");
+			$("#resetCode").hide();
+			$("#resetCodeConfirmBtn").hide();
 			$("#resetVerifyBtn").show();
 			$(".insert-btn").show();
 			$(".rePw-btn").hide();
@@ -506,8 +513,7 @@ body {
 		$(".modal-close").on("click", function(e) {
 			e.preventDefault();
 			$(this).closest(".dialog").fadeOut();
-			$("#findIdName, #findIdPhone").val("");
-			$(".id-result-div").empty();
+			resetIdModalState();
 		});
 
 		$(".modal-closeA").on("click", function(e) {
@@ -516,12 +522,87 @@ body {
 			resetPwModalState();
 		});
 
+		$("#findIdVerifyBtn").on("click", function() {
+			const email = $("#findIdEmail").val().trim();
+			const emailReg = /^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+$/;
+
+			if (!email) {
+				showIdResult("이메일을 입력해주세요.", "#BB271A");
+				return;
+			}
+			if (!emailReg.test(email)) {
+				showIdResult("이메일 형식을 확인해주세요.", "#BB271A");
+				return;
+			}
+
+			showIdResult("인증번호 전송 중입니다.", "#2854C5");
+			$.ajax({
+				url: "/api/emailCode",
+				type: "get",
+				data: { receiver: email },
+				success: function(code) {
+					findIdMailCode = code;
+					findIdEmailVerified = false;
+					$("#findIdCode").show().val("");
+					$("#findIdVerifyBtn").hide();
+					$("#findIdCodeConfirmBtn").show();
+					showIdResult("인증번호를 입력해주세요.", "#2854C5");
+
+					if (findIdMailTimer) {
+						clearTimeout(findIdMailTimer);
+					}
+					findIdMailTimer = setTimeout(function() {
+						findIdMailCode = null;
+						findIdEmailVerified = false;
+						$("#findIdCodeConfirmBtn").hide();
+						$("#findIdVerifyBtn").show();
+						$("#findIdCode").hide().val("");
+						showIdResult("인증시간이 만료되었습니다. 다시 요청해주세요.", "#BB271A");
+					}, 180000);
+				},
+				error: function() {
+					showIdResult("인증번호 전송에 실패했습니다.", "gray");
+				}
+			});
+		});
+
+		$("#findIdCodeConfirmBtn").on("click", function() {
+			const inputCode = $("#findIdCode").val().trim();
+
+			if (!findIdMailCode) {
+				showIdResult("인증번호를 다시 요청해주세요.", "#BB271A");
+				return;
+			}
+			if (!inputCode) {
+				showIdResult("인증번호를 입력해주세요.", "#BB271A");
+				return;
+			}
+			if (findIdMailCode.toLowerCase() !== inputCode.toLowerCase()) {
+				showIdResult("인증번호가 일치하지 않습니다.", "#BB271A");
+				return;
+			}
+
+			findIdEmailVerified = true;
+			if (findIdMailTimer) {
+				clearTimeout(findIdMailTimer);
+				findIdMailTimer = null;
+			}
+			findIdMailCode = null;
+			$("#findIdCode").hide();
+			$("#findIdCodeConfirmBtn").hide();
+			showIdResult("이메일 인증이 완료되었습니다.", "#2854C5");
+		});
+
 		$(".search-btn").on("click", function() {
 			const memberName = $("#findIdName").val().trim();
 			const memberPhone = $("#findIdPhone").val().trim();
 
 			if (!memberName || !memberPhone) {
 				showIdResult("이름과 전화번호를 입력해주세요.", "#BB271A");
+				return;
+			}
+			if (!findIdEmailVerified) {
+				showIdResult("이메일 인증을 완료해주세요.", "#BB271A");
 				return;
 			}
 
@@ -561,7 +642,7 @@ body {
 						verifiedMemberId = memberId;
 						verifiedMemberPhone = memberPhone;
 
-						$(".searchEmail-div, .emailCertify-div, .searchPw-div, .searchPwRe-div").removeClass("hidden");
+						$(".dialogA .searchEmail-div, .dialogA .searchPw-div, .dialogA .searchPwRe-div").removeClass("hidden");
 						$(".insert-btn").hide();
 						$(".rePw-btn").show();
 						showPwResult("회원 확인 완료. 이메일 인증 후 새 비밀번호를 입력해주세요.", "#2854C5");
@@ -707,5 +788,6 @@ body {
 	<th:block th:include="common/footer"></th:block>
 </body>
 </html>
+
 
 
