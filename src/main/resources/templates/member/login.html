@@ -279,6 +279,30 @@ body {
 .hidden {
 	display: none;
 }
+
+/* password-reset modal layout fix */
+.dialogA>.tb .inner {
+	height: auto;
+	max-height: 92vh;
+	overflow-y: auto;
+	padding-bottom: 24px;
+}
+
+.dialogA .ct {
+	margin-top: 28px;
+}
+
+.dialogA .emailCertify-div {
+	justify-content: flex-end;
+}
+
+.dialogA .sub-btn {
+	margin-top: 20px;
+}
+
+.dialogA .close {
+	margin-top: 12px;
+}
 </style>
 </head>
 <body>
@@ -683,3 +707,5 @@ body {
 	<th:block th:include="common/footer"></th:block>
 </body>
 </html>
+
+
