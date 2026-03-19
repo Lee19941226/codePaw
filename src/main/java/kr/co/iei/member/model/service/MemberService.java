@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,9 +18,18 @@ public class MemberService {
 	
 	@Autowired
 	private MemberDao memberDao;
+
+	@Autowired
+	private PasswordEncoder passwordEncoder;
 	
 	public Member login(Member m) {
 		Member member = memberDao.login(m);
+		if(member == null) {
+			return null;
+		}
+		if(!passwordEncoder.matches(m.getMemberPw(), member.getMemberPw())) {
+			return null;
+		}
 		return member;
 	}
 	public Member selectMemberId(String memberId) {
@@ -34,6 +44,7 @@ public class MemberService {
 	}
 	@Transactional
 	public int join(Member m) {
+		m.setMemberPw(passwordEncoder.encode(m.getMemberPw()));
 		int result = memberDao.join(m);
 		return result;
 	}
@@ -186,6 +197,11 @@ public class MemberService {
 	}
 	@Transactional
 	public int updateInfo(Member m) {
+		if(m.getMemberPw() != null && !m.getMemberPw().trim().isEmpty()) {
+			m.setMemberPw(passwordEncoder.encode(m.getMemberPw()));
+		}else {
+			m.setMemberPw(null);
+		}
 		int result = memberDao.updateInfo(m);
 		
 		return result;
@@ -205,10 +221,9 @@ public class MemberService {
 		Member m = memberDao.passwordRe(memberId, memberPhone);
 		return m;
 	}
-	public boolean RePassword(String memberPw) {
-		boolean result = memberDao.RePassword(memberPw);
-		
-		return result;
+	public boolean RePassword(Member m) {
+		m.setMemberPw(passwordEncoder.encode(m.getMemberPw()));
+		int result = memberDao.RePassword(m);
+		return result > 0;
 	}
 }
-

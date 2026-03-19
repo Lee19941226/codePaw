@@ -38,9 +38,10 @@ public interface MemberDao {
 
 	Member passwordRe(String memberId, String memberPhone);
 
-	boolean RePassword(String memberPw);
+	int RePassword(Member m);
 
 	
 
 
 }
+

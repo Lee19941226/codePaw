@@ -1,7 +1,6 @@
 package kr.co.iei.member.controller;
 import kr.co.iei.notice.controller.NoticeController;
 
-import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -9,7 +8,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import jakarta.servlet.http.Cookie;
@@ -167,7 +165,6 @@ public class MemberController {
 		}else {
 			if(result > 0) {
 				Member member = (Member)session.getAttribute("member");
-				member.setMemberPw(m.getMemberPw());
 				member.setMemberName(m.getMemberName());
 				member.setMemberAddr(m.getMemberAddr());
 				member.setMemberPhone(m.getMemberPhone());
@@ -217,14 +214,20 @@ public class MemberController {
 	}
 	@ResponseBody
 	@GetMapping(value = "/passwordRe")
-	public Member passwordRe(String memberId, String memberPhone) {
+	public boolean passwordRe(String memberId, String memberPhone) {
 		Member m = memberService.passwordRe(memberId, memberPhone);
-		return m;
+		return m != null;
 	}
 	@ResponseBody
 	@PostMapping(value = "/RePassword")
-	public boolean RePassoword(String memberPw) {
-		boolean result = memberService.RePassword(memberPw);
-		return result;
+	public boolean RePassoword(String memberId, String memberPhone, String memberPw) {
+		Member m = new Member();
+		m.setMemberId(memberId);
+		m.setMemberPhone(memberPhone);
+		m.setMemberPw(memberPw);
+		return memberService.RePassword(m);
 	}
 }
+
+
+
